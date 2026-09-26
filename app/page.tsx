@@ -2,13 +2,7 @@
 
 import Image from 'next/image';
 import { useRef, useState } from 'react';
-import { IBM_Plex_Sans_Thai } from 'next/font/google';
 import { toJpeg } from 'html-to-image';
-
-const ibmPlexSansThai = IBM_Plex_Sans_Thai({
-  subsets: ['thai'],
-  weight: ['400', '500', '600', '700'],
-});
 
 const tuition = {
   มัธยมศึกษาปีที่_1: {
@@ -178,7 +172,12 @@ export default function Home() {
 
   const programList = Object.keys(tuition[level].programs);
 
-  const basePrice = tuition[level].programs[program].semester;
+  const basePrice = (
+    tuition[level].programs as Record<
+      string,
+      { semester: number; yearly: number }
+    >
+  )[program].semester;
 
   let admissionFee = 0;
 
@@ -213,7 +212,9 @@ export default function Home() {
     try {
       setExporting(true);
 
-      await document.fonts.ready;
+      if (typeof document !== 'undefined' && document.fonts) {
+        await document.fonts.ready;
+      }
 
       const element = receiptRef.current;
       const width = element.offsetWidth;
@@ -251,7 +252,11 @@ export default function Home() {
 
   return (
     <main
-      className={`${ibmPlexSansThai.className} min-h-screen bg-[#F5F1E8] p-8 text-[#2D2926]`}
+      className="min-h-screen bg-[#F5F1E8] p-8 text-[#2D2926]"
+      style={{
+        fontFamily:
+          '"IBM Plex Sans Thai", "Noto Sans Thai", Tahoma, Arial, sans-serif',
+      }}
     >
       {/* =========================
           Minimal Header
