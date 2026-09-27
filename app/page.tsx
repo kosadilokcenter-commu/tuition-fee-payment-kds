@@ -1,8 +1,21 @@
 'use client';
 
 import Image from 'next/image';
+import { Inter, Noto_Sans_Thai } from 'next/font/google';
 import { useRef, useState } from 'react';
 import { toJpeg } from 'html-to-image';
+
+const inter = Inter({
+  subsets: ['latin'],
+  display: 'swap',
+  variable: '--font-inter',
+});
+
+const notoSansThai = Noto_Sans_Thai({
+  subsets: ['thai'],
+  display: 'swap',
+  variable: '--font-noto-sans-thai',
+});
 
 const tuition = {
   มัธยมศึกษาปีที่_1: {
@@ -252,10 +265,12 @@ export default function Home() {
 
   return (
     <main
-      className="min-h-screen bg-[#F5F1E8] p-8 text-[#2D2926]"
+      className={`${inter.variable} ${notoSansThai.variable} min-h-screen bg-[#F5F1E8] p-8 text-[#2D2926]`}
       style={{
         fontFamily:
-          '"IBM Plex Sans Thai", "Noto Sans Thai", Tahoma, Arial, sans-serif',
+          'var(--font-noto-sans-thai), var(--font-inter), Arial, sans-serif',
+        fontWeight: 400,
+        letterSpacing: '-0.01em',
       }}
     >
       {/* =========================
@@ -278,7 +293,14 @@ export default function Home() {
             <div className="h-14 w-px bg-white/20" />
 
             <div>
-              <p className="text-xs md:text-sm text-white/60 tracking-[0.18em] mb-2">
+              <p
+                className="text-xs md:text-sm text-white/60 tracking-[0.16em] mb-2"
+                style={{
+                  fontFamily:
+                    'var(--font-inter), Arial, sans-serif',
+                  fontWeight: 500,
+                }}
+              >
                 KOSADILOK DEMONSTRATION SCHOOL
               </p>
 
@@ -301,7 +323,7 @@ export default function Home() {
         ========================= */}
 
         <section className="bg-white rounded-2xl p-6 border text-[#2D2926]">
-          <h2 className="text-[#7A1A22] font-bold mb-4">
+          <h2 className="text-[#7A1A22] font-semibold tracking-tight mb-4">
             Student Information
           </h2>
 
@@ -327,7 +349,7 @@ export default function Home() {
         ========================= */}
 
         <section className="bg-white rounded-2xl p-6 border text-[#2D2926]">
-          <h2 className="text-[#7A1A22] font-bold mb-4">
+          <h2 className="text-[#7A1A22] font-semibold tracking-tight mb-4">
             Academic Program
           </h2>
 
@@ -395,7 +417,7 @@ export default function Home() {
         ========================= */}
 
         <section className="bg-white rounded-2xl p-6 border text-[#2D2926]">
-          <h2 className="text-[#7A1A22] font-bold mb-4">
+          <h2 className="text-[#7A1A22] font-semibold tracking-tight mb-4">
             Student Services & Facility Support
           </h2>
 
@@ -515,7 +537,7 @@ export default function Home() {
             Total Amount
           </p>
 
-          <h2 className="text-4xl font-bold text-white">
+          <h2 className="text-4xl font-semibold tracking-tight text-white">
             {total.toLocaleString()} THB
           </h2>
         </section>
@@ -539,7 +561,14 @@ export default function Home() {
                   className="mx-auto mb-3 object-contain"
                 />
 
-                <h3 className="font-bold text-[#7A1A22]">
+                <h3
+                  className="font-semibold text-[#7A1A22] tracking-[0.04em]"
+                  style={{
+                    fontFamily:
+                      'var(--font-inter), Arial, sans-serif',
+                    fontWeight: 600,
+                  }}
+                >
                   KOSADILOK
                   <br />
                   DEMONSTRATION SCHOOL
@@ -553,8 +582,8 @@ export default function Home() {
               <div className="border-t border-gray-200 mx-5" />
 
               <div className="px-6 py-5 text-[#2D2926]">
-                <h2 className="text-xl font-bold text-[#2D2926]">
-                  ค่าเล่าเรียนการศึกษา
+                <h2 className="text-xl font-semibold tracking-tight text-[#2D2926]">
+                  ค่าธรรมเนียมการศึกษา
                 </h2>
 
                 <div className="flex justify-between text-sm mt-3 text-[#2D2926]">
@@ -577,7 +606,7 @@ export default function Home() {
 
                 <div className="space-y-3 text-sm text-[#2D2926]">
                   <div className="flex justify-between gap-4">
-                    <span>ค่าเล่าเรียนปกติ</span>
+                    <span>ค่าธรรมเนียมการศึกษา ภาคเรียนที่ 1/2569</span>
                     <span>
                       {basePrice.toLocaleString()}
                     </span>
@@ -644,7 +673,7 @@ export default function Home() {
                   )}
                 </div>
 
-                <div className="border-t border-gray-200 mt-6 pt-5 flex justify-between font-bold text-[#2D2926]">
+                <div className="border-t border-gray-200 mt-6 pt-5 flex justify-between font-semibold text-[#2D2926]">
                   <span>รวมเป็นจำนวนเงิน</span>
 
                   <span className="text-xl text-[#7A1A22]">
@@ -668,7 +697,7 @@ export default function Home() {
           <button
             onClick={exportReceipt}
             disabled={exporting}
-            className="bg-[#7A1A22] text-white px-8 py-3 rounded-xl font-bold"
+            className="bg-[#7A1A22] text-white px-8 py-3 rounded-xl font-semibold tracking-tight"
           >
             {exporting
               ? 'Exporting...'

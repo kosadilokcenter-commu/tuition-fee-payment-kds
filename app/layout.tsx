@@ -7,6 +7,11 @@ const inter = Inter({ subsets: ['latin'] });
 export const metadata: Metadata = {
   title: 'KDS Tuition Fee Payment',
   description: 'ระบบจำลองการชำระค่าธรรมเนียมการศึกษา คอมมูนิตี้ KDS',
+  icons: {
+    icon: '/logo-kds.png',
+    shortcut: '/logo-kds.png',
+    apple: '/logo-kds.png',
+  },
 };
 
 export default function RootLayout({
@@ -18,8 +23,6 @@ export default function RootLayout({
     <html lang="th">
       <head>
         <link rel="icon" href="/logo-kds.png" type="image/png" />
-        <link rel="shortcut icon" href="/logo-kds.png" type="image/png" />
-        <link rel="apple-touch-icon" href="/logo-kds.png" />
       </head>
 
       <body className={inter.className}>{children}</body>
