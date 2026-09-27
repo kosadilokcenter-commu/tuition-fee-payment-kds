@@ -277,7 +277,7 @@ export default function Home() {
           Minimal Header
       ========================= */}
 
-      <header className="bg-[#7A1A22] rounded-2xl text-white">
+      <header className="max-w-6xl mx-auto bg-[#7A1A22] rounded-2xl text-white">
         <div className="px-8 py-9 md:px-12 md:py-10">
           <div className="flex items-center gap-6">
             <div className="shrink-0">
