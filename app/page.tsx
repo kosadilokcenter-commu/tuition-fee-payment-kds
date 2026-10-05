@@ -1,21 +1,18 @@
 'use client';
 
 import Image from 'next/image';
-import { Inter, Noto_Sans_Thai } from 'next/font/google';
 import { useRef, useState } from 'react';
-import { toJpeg } from 'html-to-image';
-
-const inter = Inter({
-  subsets: ['latin'],
-  display: 'swap',
-  variable: '--font-inter',
-});
+import { Noto_Sans_Thai } from 'next/font/google';
+import { toBlob } from 'html-to-image';
 
 const notoSansThai = Noto_Sans_Thai({
   subsets: ['thai'],
-  display: 'swap',
-  variable: '--font-noto-sans-thai',
+  weight: ['400', '500', '600', '700'],
 });
+
+/* =========================
+   Tuition Database
+========================= */
 
 const tuition = {
   มัธยมศึกษาปีที่_1: {
@@ -163,34 +160,45 @@ const levelLabel = {
 export default function Home() {
   const receiptRef = useRef<HTMLDivElement>(null);
 
+  /* =========================
+     Student Data
+  ========================= */
+
   const [name, setName] = useState('');
   const [studentId, setStudentId] = useState('');
 
-  const [level, setLevel] =
-    useState<keyof typeof tuition>('มัธยมศึกษาปีที่_4');
+  /* =========================
+     Academic Data
+  ========================= */
+
+  const [level, setLevel] = useState<keyof typeof tuition>(
+    'มัธยมศึกษาปีที่_4'
+  );
 
   const [program, setProgram] = useState('วิทย์ - คณิต');
 
   const [firstEntry, setFirstEntry] = useState(false);
+
+  /* =========================
+     Extra Service
+  ========================= */
 
   const [extra, setExtra] = useState({
     food: false,
     activity: false,
   });
 
-  const [busZone, setBusZone] =
-    useState<'none' | 'A' | 'B' | 'C'>('none');
+  const [busZone, setBusZone] = useState<'none' | 'A' | 'B' | 'C'>('none');
 
   const [exporting, setExporting] = useState(false);
 
+  /* =========================
+     Calculate Price
+  ========================= */
+
   const programList = Object.keys(tuition[level].programs);
 
-  const basePrice = (
-    tuition[level].programs as Record<
-      string,
-      { semester: number; yearly: number }
-    >
-  )[program].semester;
+  const basePrice = tuition[level].programs[program].semester;
 
   let admissionFee = 0;
 
@@ -219,21 +227,24 @@ export default function Home() {
 
   const today = new Date().toLocaleDateString('th-TH');
 
+  /* =========================
+     Export Receipt JPG
+  ========================= */
+
   const exportReceipt = async () => {
     if (!receiptRef.current) return;
 
     try {
       setExporting(true);
 
-      if (typeof document !== 'undefined' && document.fonts) {
-        await document.fonts.ready;
-      }
+      await document.fonts.ready;
 
       const element = receiptRef.current;
+
       const width = element.offsetWidth;
       const height = element.scrollHeight;
 
-      const image = await toJpeg(element, {
+      const blob = await toBlob(element, {
         quality: 0.95,
         backgroundColor: '#7A1A22',
         pixelRatio: 3,
@@ -247,17 +258,62 @@ export default function Home() {
         },
       });
 
+      if (!blob) {
+        throw new Error('ไม่สามารถสร้างไฟล์ใบเสร็จได้');
+      }
+
+      const fileName = `KDS-Receipt-${studentId || name || 'student'}.jpg`;
+
+      const file = new File([blob], fileName, {
+        type: 'image/jpeg',
+      });
+
+      /* =========================
+         Mobile Share
+      ========================= */
+
+      if (
+        /iPhone|iPad|iPod|Android/i.test(navigator.userAgent) &&
+        navigator.share &&
+        navigator.canShare &&
+        navigator.canShare({ files: [file] })
+      ) {
+        await navigator.share({
+          files: [file],
+          title: 'KDS Receipt',
+          text: 'ใบเสร็จค่าธรรมเนียมการศึกษา',
+        });
+
+        return;
+      }
+
+      /* =========================
+         Desktop / Android Fallback
+      ========================= */
+
+      const url = URL.createObjectURL(blob);
+
       const link = document.createElement('a');
 
-      link.download = `KDS-Receipt-${studentId || name || 'student'}.jpg`;
-      link.href = image;
+      link.href = url;
+      link.download = fileName;
+      link.style.display = 'none';
 
       document.body.appendChild(link);
       link.click();
       document.body.removeChild(link);
+
+      setTimeout(() => {
+        URL.revokeObjectURL(url);
+      }, 1000);
     } catch (error) {
       console.error(error);
-      alert('Export ใบเสร็จไม่สำเร็จ');
+
+      if (error instanceof DOMException && error.name === 'AbortError') {
+        return;
+      }
+
+      alert('ไม่สามารถดาวน์โหลดใบเสร็จได้ กรุณาลองใหม่อีกครั้ง');
     } finally {
       setExporting(false);
     }
@@ -265,50 +321,37 @@ export default function Home() {
 
   return (
     <main
-      className={`${inter.variable} ${notoSansThai.variable} min-h-screen bg-[#F5F1E8] p-8 text-[#2D2926]`}
-      style={{
-        fontFamily:
-          'var(--font-noto-sans-thai), var(--font-inter), Arial, sans-serif',
-        fontWeight: 400,
-        letterSpacing: '-0.01em',
-      }}
+      className={`${notoSansThai.className} min-h-screen bg-[#F5F1E8] p-8 text-[#2D2926]`}
     >
       {/* =========================
           Minimal Header
       ========================= */}
 
-      <header className="max-w-6xl mx-auto bg-[#7A1A22] rounded-2xl text-white">
-        <div className="px-8 py-9 md:px-12 md:py-10">
-          <div className="flex items-center gap-6">
+      <header className="bg-[#7A1A22] rounded-2xl text-white">
+        <div className="px-6 py-5 md:px-8 md:py-6">
+          <div className="flex items-center gap-4">
             <div className="shrink-0">
               <Image
                 src="/logo-kds.png"
                 alt="KDS Logo"
-                width={88}
-                height={88}
+                width={64}
+                height={64}
                 className="object-contain"
               />
             </div>
 
-            <div className="h-14 w-px bg-white/20" />
+            <div className="h-12 w-px bg-white/20" />
 
             <div>
-              <p
-                className="text-xs md:text-sm text-white/60 tracking-[0.16em] mb-2"
-                style={{
-                  fontFamily:
-                    'var(--font-inter), Arial, sans-serif',
-                  fontWeight: 500,
-                }}
-              >
+              <p className="text-xs md:text-sm text-white/60 tracking-[0.18em] mb-1">
                 KOSADILOK DEMONSTRATION SCHOOL
               </p>
 
-              <h1 className="text-2xl md:text-4xl font-semibold tracking-tight text-white">
+              <h1 className="text-xl md:text-3xl font-semibold tracking-tight text-white">
                 ชำระค่าธรรมเนียมการศึกษา
               </h1>
 
-              <p className="mt-2 text-sm md:text-base text-white/70">
+              <p className="mt-1 text-sm md:text-base text-white/70">
                 ภาคเรียนที่ 1 ปีการศึกษา 2569
               </p>
             </div>
@@ -317,13 +360,11 @@ export default function Home() {
       </header>
 
       <div className="max-w-6xl mx-auto mt-8 space-y-8">
-
         {/* =========================
             Student Info
         ========================= */}
-
         <section className="bg-white rounded-2xl p-6 border text-[#2D2926]">
-          <h2 className="text-[#7A1A22] font-semibold tracking-tight mb-4">
+          <h2 className="text-[#7A1A22] font-bold mb-4">
             Student Information
           </h2>
 
@@ -347,9 +388,8 @@ export default function Home() {
         {/* =========================
             Academic Program
         ========================= */}
-
         <section className="bg-white rounded-2xl p-6 border text-[#2D2926]">
-          <h2 className="text-[#7A1A22] font-semibold tracking-tight mb-4">
+          <h2 className="text-[#7A1A22] font-bold mb-4">
             Academic Program
           </h2>
 
@@ -358,13 +398,10 @@ export default function Home() {
               className="border border-gray-300 bg-white text-[#2D2926] rounded-xl p-3 outline-none focus:border-[#7A1A22]"
               value={level}
               onChange={(e) => {
-                const value =
-                  e.target.value as keyof typeof tuition;
+                const value = e.target.value as keyof typeof tuition;
 
                 setLevel(value);
-                setProgram(
-                  Object.keys(tuition[value].programs)[0]
-                );
+                setProgram(Object.keys(tuition[value].programs)[0]);
               }}
             >
               {Object.keys(tuition).map((item) => (
@@ -400,14 +437,10 @@ export default function Home() {
               <input
                 type="checkbox"
                 checked={firstEntry}
-                onChange={(e) =>
-                  setFirstEntry(e.target.checked)
-                }
+                onChange={(e) => setFirstEntry(e.target.checked)}
               />
 
-              <span>
-                นักเรียนใหม่ / ค่าสมัครแรกเข้า
-              </span>
+              <span>นักเรียนใหม่ / ค่าสมัครแรกเข้า</span>
             </label>
           )}
         </section>
@@ -415,9 +448,8 @@ export default function Home() {
         {/* =========================
             Student Services & Facility Support
         ========================= */}
-
         <section className="bg-white rounded-2xl p-6 border text-[#2D2926]">
-          <h2 className="text-[#7A1A22] font-semibold tracking-tight mb-4">
+          <h2 className="text-[#7A1A22] font-bold mb-4">
             Student Services & Facility Support
           </h2>
 
@@ -484,40 +516,22 @@ export default function Home() {
               className="w-full border border-gray-300 bg-white text-[#2D2926] rounded-xl p-3 outline-none focus:border-[#7A1A22]"
               value={busZone}
               onChange={(e) =>
-                setBusZone(
-                  e.target.value as
-                    | 'none'
-                    | 'A'
-                    | 'B'
-                    | 'C'
-                )
+                setBusZone(e.target.value as 'none' | 'A' | 'B' | 'C')
               }
             >
-              <option
-                value="none"
-                className="bg-white text-[#2D2926]"
-              >
+              <option value="none" className="bg-white text-[#2D2926]">
                 ค่าบริการรถรับ-ส่งนักเรียน
               </option>
 
-              <option
-                value="A"
-                className="bg-white text-[#2D2926]"
-              >
+              <option value="A" className="bg-white text-[#2D2926]">
                 โซน A — 15,000 บาท / ภาคเรียน
               </option>
 
-              <option
-                value="B"
-                className="bg-white text-[#2D2926]"
-              >
+              <option value="B" className="bg-white text-[#2D2926]">
                 โซน B — 20,000 บาท / ภาคเรียน
               </option>
 
-              <option
-                value="C"
-                className="bg-white text-[#2D2926]"
-              >
+              <option value="C" className="bg-white text-[#2D2926]">
                 โซน C — 25,000 บาท / ภาคเรียน
               </option>
             </select>
@@ -531,13 +545,10 @@ export default function Home() {
         {/* =========================
             Total
         ========================= */}
-
         <section className="bg-[#7A1A22] text-white rounded-2xl p-8 text-center">
-          <p className="text-white opacity-70">
-            Total Amount
-          </p>
+          <p className="text-white opacity-70">Total Amount</p>
 
-          <h2 className="text-4xl font-semibold tracking-tight text-white">
+          <h2 className="text-4xl font-bold text-white">
             {total.toLocaleString()} THB
           </h2>
         </section>
@@ -545,7 +556,6 @@ export default function Home() {
         {/* =========================
             Receipt
         ========================= */}
-
         <div className="flex justify-center">
           <section
             ref={receiptRef}
@@ -561,14 +571,7 @@ export default function Home() {
                   className="mx-auto mb-3 object-contain"
                 />
 
-                <h3
-                  className="font-semibold text-[#7A1A22] tracking-[0.04em]"
-                  style={{
-                    fontFamily:
-                      'var(--font-inter), Arial, sans-serif',
-                    fontWeight: 600,
-                  }}
-                >
+                <h3 className="font-bold text-[#7A1A22]">
                   KOSADILOK
                   <br />
                   DEMONSTRATION SCHOOL
@@ -582,8 +585,8 @@ export default function Home() {
               <div className="border-t border-gray-200 mx-5" />
 
               <div className="px-6 py-5 text-[#2D2926]">
-                <h2 className="text-xl font-semibold tracking-tight text-[#2D2926]">
-                  ค่าธรรมเนียมการศึกษา
+                <h2 className="text-xl font-bold text-[#2D2926]">
+                  ค่าเล่าเรียนการศึกษา
                 </h2>
 
                 <div className="flex justify-between text-sm mt-3 text-[#2D2926]">
@@ -606,10 +609,8 @@ export default function Home() {
 
                 <div className="space-y-3 text-sm text-[#2D2926]">
                   <div className="flex justify-between gap-4">
-                    <span>ค่าธรรมเนียมการศึกษา ภาคเรียนที่ 1/2569</span>
-                    <span>
-                      {basePrice.toLocaleString()}
-                    </span>
+                    <span>ค่าเล่าเรียนปกติ</span>
+                    <span>{basePrice.toLocaleString()}</span>
                   </div>
 
                   <div className="flex justify-between gap-4">
@@ -623,9 +624,7 @@ export default function Home() {
                   {admissionFee > 0 && (
                     <div className="flex justify-between gap-4">
                       <span>ค่าสมัครแรกเข้า</span>
-                      <span>
-                        {admissionFee.toLocaleString()}
-                      </span>
+                      <span>{admissionFee.toLocaleString()}</span>
                     </div>
                   )}
 
@@ -638,42 +637,34 @@ export default function Home() {
 
                   {extra.activity && (
                     <div className="flex justify-between gap-4">
-                      <span>
-                        ค่าธรรมเนียมกิจกรรมและทัศนศึกษา
-                      </span>
+                      <span>ค่าธรรมเนียมกิจกรรมและทัศนศึกษา</span>
                       <span>5,000</span>
                     </div>
                   )}
 
                   {busZone === 'A' && (
                     <div className="flex justify-between gap-4">
-                      <span>
-                        ค่าบริการรถรับ-ส่งนักเรียน โซน A
-                      </span>
+                      <span>ค่าบริการรถรับ-ส่งนักเรียน โซน A</span>
                       <span>15,000</span>
                     </div>
                   )}
 
                   {busZone === 'B' && (
                     <div className="flex justify-between gap-4">
-                      <span>
-                        ค่าบริการรถรับ-ส่งนักเรียน โซน B
-                      </span>
+                      <span>ค่าบริการรถรับ-ส่งนักเรียน โซน B</span>
                       <span>20,000</span>
                     </div>
                   )}
 
                   {busZone === 'C' && (
                     <div className="flex justify-between gap-4">
-                      <span>
-                        ค่าบริการรถรับ-ส่งนักเรียน โซน C
-                      </span>
+                      <span>ค่าบริการรถรับ-ส่งนักเรียน โซน C</span>
                       <span>25,000</span>
                     </div>
                   )}
                 </div>
 
-                <div className="border-t border-gray-200 mt-6 pt-5 flex justify-between font-semibold text-[#2D2926]">
+                <div className="border-t border-gray-200 mt-6 pt-5 flex justify-between font-bold text-[#2D2926]">
                   <span>รวมเป็นจำนวนเงิน</span>
 
                   <span className="text-xl text-[#7A1A22]">
@@ -692,16 +683,13 @@ export default function Home() {
         {/* =========================
             Export Receipt
         ========================= */}
-
         <div className="flex justify-center">
           <button
             onClick={exportReceipt}
             disabled={exporting}
-            className="bg-[#7A1A22] text-white px-8 py-3 rounded-xl font-semibold tracking-tight"
+            className="bg-[#7A1A22] text-white px-8 py-3 rounded-xl font-bold"
           >
-            {exporting
-              ? 'Exporting...'
-              : 'Download Receipt'}
+            {exporting ? 'Exporting...' : 'Download Receipt'}
           </button>
         </div>
       </div>
