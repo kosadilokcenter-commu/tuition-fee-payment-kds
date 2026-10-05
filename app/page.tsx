@@ -1,9 +1,9 @@
 'use client';
 
 import Image from 'next/image';
-import { useRef, useState } from 'react';
+import { useEffect, useRef, useState } from 'react';
 import { Noto_Sans_Thai } from 'next/font/google';
-import html2canvas from 'html2canvas';
+import { toBlob } from 'html-to-image';
 
 const notoSansThai = Noto_Sans_Thai({
   subsets: ['thai'],
@@ -193,6 +193,66 @@ export default function Home() {
   const [exporting, setExporting] = useState(false);
 
   /* =========================
+     Receipt Logo
+  ========================= */
+
+  const [logoDataUrl, setLogoDataUrl] = useState('');
+
+  useEffect(() => {
+    let cancelled = false;
+
+    const loadLogo = async () => {
+      try {
+        const response = await fetch('/logo-kds.png', {
+          cache: 'force-cache',
+        });
+
+        if (!response.ok) {
+          throw new Error('ไม่สามารถโหลดโลโก้ได้');
+        }
+
+        const blob = await response.blob();
+
+        const dataUrl = await new Promise<string>(
+          (resolve, reject) => {
+            const reader = new FileReader();
+
+            reader.onloadend = () => {
+              if (typeof reader.result === 'string') {
+                resolve(reader.result);
+              } else {
+                reject(
+                  new Error('ไม่สามารถแปลงโลโก้ได้')
+                );
+              }
+            };
+
+            reader.onerror = () => {
+              reject(
+                new Error('ไม่สามารถอ่านโลโก้ได้')
+              );
+            };
+
+            reader.readAsDataURL(blob);
+          }
+        );
+
+        if (!cancelled) {
+          setLogoDataUrl(dataUrl);
+        }
+      } catch (error) {
+        console.error('Logo loading error:', error);
+      }
+    };
+
+    loadLogo();
+
+    return () => {
+      cancelled = true;
+    };
+  }, []);
+
+  /* =========================
      Calculate Price
   ========================= */
 
@@ -201,7 +261,10 @@ export default function Home() {
   const basePrice = (
     tuition[level].programs as Record<
       string,
-      { semester: number; yearly: number }
+      {
+        semester: number;
+        yearly: number;
+      }
     >
   )[program].semester;
 
@@ -234,7 +297,6 @@ export default function Home() {
 
   /* =========================
      Export Receipt JPG
-     ใช้ html2canvas
   ========================= */
 
   const exportReceipt = async () => {
@@ -248,25 +310,65 @@ export default function Home() {
       const element = receiptRef.current;
 
       /* =========================
-         รอรูปภาพทั้งหมดโหลดเสร็จ
+         ตรวจสอบโลโก้
       ========================= */
 
-      const images = Array.from(
-        element.querySelectorAll('img')
-      );
+      let currentLogo = logoDataUrl;
 
-      await Promise.all(
-        images.map((img) => {
-          if (img.complete && img.naturalWidth > 0) {
-            return Promise.resolve();
+      if (!currentLogo) {
+        const response = await fetch('/logo-kds.png', {
+          cache: 'no-store',
+        });
+
+        if (!response.ok) {
+          throw new Error('ไม่สามารถโหลดโลโก้ได้');
+        }
+
+        const blob = await response.blob();
+
+        currentLogo = await new Promise<string>(
+          (resolve, reject) => {
+            const reader = new FileReader();
+
+            reader.onloadend = () => {
+              if (typeof reader.result === 'string') {
+                resolve(reader.result);
+              } else {
+                reject(
+                  new Error('ไม่สามารถแปลงโลโก้ได้')
+                );
+              }
+            };
+
+            reader.onerror = () => {
+              reject(
+                new Error('ไม่สามารถอ่านโลโก้ได้')
+              );
+            };
+
+            reader.readAsDataURL(blob);
           }
+        );
 
-          return new Promise<void>((resolve) => {
-            img.onload = () => resolve();
-            img.onerror = () => resolve();
-          });
-        })
-      );
+        setLogoDataUrl(currentLogo);
+      }
+
+      /* =========================
+         ใส่ Data URL ให้ SVG
+      ========================= */
+
+      const logoImage = element.querySelector(
+        '[data-receipt-logo-image]'
+      ) as SVGImageElement | null;
+
+      if (logoImage && currentLogo) {
+        logoImage.setAttribute('href', currentLogo);
+        logoImage.setAttributeNS(
+          'http://www.w3.org/1999/xlink',
+          'href',
+          currentLogo
+        );
+      }
 
       /* =========================
          รอ Browser Render
@@ -277,67 +379,30 @@ export default function Home() {
       );
 
       await new Promise<void>((resolve) =>
-        setTimeout(resolve, 100)
+        setTimeout(resolve, 150)
       );
 
+      const width = element.offsetWidth;
+      const height = element.scrollHeight;
+
       /* =========================
-         Create Canvas
+         Export
       ========================= */
 
-      const canvas = await html2canvas(element, {
-        scale: 3,
+      const blob = await toBlob(element, {
+        quality: 0.95,
         backgroundColor: '#7A1A22',
-        useCORS: true,
-        allowTaint: false,
-        imageTimeout: 15000,
-        logging: false,
-        width: element.offsetWidth,
-        height: element.scrollHeight,
-        windowWidth: document.documentElement.clientWidth,
-        windowHeight: document.documentElement.clientHeight,
-        onclone: (clonedDocument) => {
-          const clonedReceipt =
-            clonedDocument.querySelector(
-              '[data-receipt]'
-            ) as HTMLElement | null;
-
-          if (clonedReceipt) {
-            clonedReceipt.style.width = `${element.offsetWidth}px`;
-            clonedReceipt.style.height = `${element.scrollHeight}px`;
-            clonedReceipt.style.maxWidth = 'none';
-            clonedReceipt.style.margin = '0';
-          }
-
-          const clonedImages =
-            clonedDocument.querySelectorAll(
-              '[data-receipt-logo]'
-            );
-
-          clonedImages.forEach((img) => {
-            const image = img as HTMLImageElement;
-
-            image.style.display = 'block';
-            image.style.visibility = 'visible';
-            image.style.opacity = '1';
-            image.style.width = '140px';
-            image.style.height = '140px';
-          });
+        pixelRatio: 3,
+        width,
+        height,
+        cacheBust: true,
+        style: {
+          width: `${width}px`,
+          height: `${height}px`,
+          margin: '0',
+          maxWidth: 'none',
         },
       });
-
-      /* =========================
-         Canvas → JPG Blob
-      ========================= */
-
-      const blob = await new Promise<Blob | null>(
-        (resolve) => {
-          canvas.toBlob(
-            resolve,
-            'image/jpeg',
-            0.95
-          );
-        }
-      );
 
       if (!blob) {
         throw new Error(
@@ -345,7 +410,8 @@ export default function Home() {
         );
       }
 
-      const fileName = `KDS-Receipt-${studentId || name || 'student'}.jpg`;
+      const fileName =
+        `KDS-Receipt-${studentId || name || 'student'}.jpg`;
 
       const file = new File([blob], fileName, {
         type: 'image/jpeg',
@@ -416,7 +482,7 @@ export default function Home() {
       className={`${notoSansThai.className} min-h-screen bg-[#F5F1E8] p-8 text-[#2D2926]`}
     >
       {/* =========================
-          Minimal Header
+          Header
       ========================= */}
 
       <header className="max-w-6xl mx-auto bg-[#7A1A22] rounded-2xl text-white">
@@ -562,7 +628,7 @@ export default function Home() {
         </section>
 
         {/* =========================
-            Student Services & Facility Support
+            Student Services
         ========================= */}
 
         <section className="bg-white rounded-2xl p-6 border text-[#2D2926]">
@@ -611,8 +677,7 @@ export default function Home() {
                 onChange={(e) =>
                   setExtra({
                     ...extra,
-                    activity:
-                      e.target.checked,
+                    activity: e.target.checked,
                   })
                 }
               />
@@ -699,20 +764,42 @@ export default function Home() {
         <div className="flex justify-center">
           <section
             ref={receiptRef}
-            data-receipt
             className="w-[448px] bg-[#7A1A22] rounded-2xl p-8"
           >
             <div className="bg-white rounded-xl overflow-hidden text-[#2D2926]">
               <div className="text-center px-6 pt-8 pb-5">
-                <Image
-                  src="/logo-kds.png"
-                  alt="KDS Logo"
-                  width={140}
-                  height={140}
-                  className="mx-auto mb-3 object-contain"
-                  data-receipt-logo
-                  unoptimized
-                />
+
+                {/* =========================
+                    Receipt Logo
+                    ใช้ SVG + Data URL
+                ========================= */}
+
+                <svg
+                  width="140"
+                  height="140"
+                  viewBox="0 0 140 140"
+                  xmlns="http://www.w3.org/2000/svg"
+                  className="mx-auto mb-3"
+                  style={{
+                    width: '140px',
+                    height: '140px',
+                    display: 'block',
+                  }}
+                  aria-label="KDS Logo"
+                >
+                  <image
+                    data-receipt-logo-image
+                    href={
+                      logoDataUrl ||
+                      '/logo-kds.png'
+                    }
+                    x="0"
+                    y="0"
+                    width="140"
+                    height="140"
+                    preserveAspectRatio="xMidYMid meet"
+                  />
+                </svg>
 
                 <h3 className="font-bold text-[#7A1A22]">
                   KOSADILOK
