@@ -247,11 +247,59 @@ export default function Home() {
       const element = receiptRef.current;
 
       /* =========================
-         Wait for Receipt Images
+         Convert Logo to Data URL
+         สำหรับแก้ปัญหาโลโก้หายบนมือถือ
       ========================= */
 
-      const images = Array.from(element.querySelectorAll('img'));
+      const logoResponse = await fetch('/logo-kds.png', {
+        cache: 'force-cache',
+      });
 
+      if (!logoResponse.ok) {
+        throw new Error('ไม่สามารถโหลดโลโก้โรงเรียนได้');
+      }
+
+      const logoBlob = await logoResponse.blob();
+
+      const logoDataUrl = await new Promise<string>(
+        (resolve, reject) => {
+          const reader = new FileReader();
+
+          reader.onloadend = () => {
+            if (typeof reader.result === 'string') {
+              resolve(reader.result);
+            } else {
+              reject(new Error('ไม่สามารถแปลงโลโก้ได้'));
+            }
+          };
+
+          reader.onerror = () => {
+            reject(new Error('ไม่สามารถอ่านไฟล์โลโก้ได้'));
+          };
+
+          reader.readAsDataURL(logoBlob);
+        }
+      );
+
+      /* =========================
+         Replace Logo Temporarily
+         ด้วย Data URL โดยตรง
+      ========================= */
+
+      const images = Array.from(
+        element.querySelectorAll('img')
+      );
+
+      const originalSources = images.map((img) => ({
+        img,
+        src: img.getAttribute('src'),
+      }));
+
+      images.forEach((img) => {
+        img.setAttribute('src', logoDataUrl);
+      });
+
+      /* รอให้ Data URL ถูก render */
       await Promise.all(
         images.map((img) => {
           if (img.complete && img.naturalWidth > 0) {
@@ -265,7 +313,6 @@ export default function Home() {
         })
       );
 
-      // รอ browser render รูปภาพให้เสร็จอีกหนึ่งรอบ
       await new Promise<void>((resolve) =>
         requestAnimationFrame(() => resolve())
       );
@@ -285,6 +332,18 @@ export default function Home() {
           margin: '0',
           maxWidth: 'none',
         },
+      });
+
+      /* =========================
+         Restore Original Logo
+      ========================= */
+
+      originalSources.forEach(({ img, src }) => {
+        if (src) {
+          img.setAttribute('src', src);
+        } else {
+          img.removeAttribute('src');
+        }
       });
 
       if (!blob) {
@@ -433,7 +492,9 @@ export default function Home() {
                   e.target.value as keyof typeof tuition;
 
                 setLevel(value);
-                setProgram(Object.keys(tuition[value].programs)[0]);
+                setProgram(
+                  Object.keys(tuition[value].programs)[0]
+                );
               }}
             >
               {Object.keys(tuition).map((item) => (
@@ -469,7 +530,9 @@ export default function Home() {
               <input
                 type="checkbox"
                 checked={firstEntry}
-                onChange={(e) => setFirstEntry(e.target.checked)}
+                onChange={(e) =>
+                  setFirstEntry(e.target.checked)
+                }
               />
 
               <span>นักเรียนใหม่ / ค่าสมัครแรกเข้า</span>
@@ -550,7 +613,11 @@ export default function Home() {
               value={busZone}
               onChange={(e) =>
                 setBusZone(
-                  e.target.value as 'none' | 'A' | 'B' | 'C'
+                  e.target.value as
+                    | 'none'
+                    | 'A'
+                    | 'B'
+                    | 'C'
                 )
               }
             >
@@ -685,7 +752,9 @@ export default function Home() {
 
                   {extra.food && (
                     <div className="flex justify-between gap-4">
-                      <span>ค่าอาหารกลางวันและของว่าง</span>
+                      <span>
+                        ค่าอาหารกลางวันและของว่าง
+                      </span>
                       <span>12,000</span>
                     </div>
                   )}
