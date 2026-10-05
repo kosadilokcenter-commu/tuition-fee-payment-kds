@@ -196,7 +196,12 @@ export default function Home() {
 
   const programList = Object.keys(tuition[level].programs);
 
-  const basePrice = tuition[level].programs[program].semester;
+  const basePrice = (
+  tuition[level].programs as Record<
+    string,
+    { semester: number; yearly: number }
+  >
+  )[program].semester;
 
   let admissionFee = 0;
 
