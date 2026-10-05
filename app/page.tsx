@@ -171,9 +171,7 @@ export default function Home() {
      Academic Data
   ========================= */
 
-  const [level, setLevel] = useState<keyof typeof tuition>(
-    'มัธยมศึกษาปีที่_4'
-  );
+  const [level, setLevel] = useState<keyof typeof tuition>('มัธยมศึกษาปีที่_4');
 
   const [program, setProgram] = useState('วิทย์ - คณิต');
 
@@ -198,15 +196,7 @@ export default function Home() {
 
   const programList = Object.keys(tuition[level].programs);
 
-  const basePrice = (
-    tuition[level].programs as Record<
-      string,
-      {
-        semester: number;
-        yearly: number;
-      }
-    >
-  )[program].semester;
+  const basePrice = tuition[level].programs[program].semester;
 
   let admissionFee = 0;
 
@@ -335,31 +325,31 @@ export default function Home() {
           Minimal Header
       ========================= */}
 
-      <header className="bg-[#7A1A22] rounded-2xl text-white">
-        <div className="px-6 py-5 md:px-8 md:py-6">
-          <div className="flex items-center gap-4">
+      <header className="max-w-6xl mx-auto bg-[#7A1A22] rounded-2xl text-white">
+        <div className="px-8 py-9 md:px-12 md:py-10">
+          <div className="flex items-center gap-6">
             <div className="shrink-0">
               <Image
                 src="/logo-kds.png"
                 alt="KDS Logo"
-                width={64}
-                height={64}
+                width={88}
+                height={88}
                 className="object-contain"
               />
             </div>
 
-            <div className="h-12 w-px bg-white/20" />
+            <div className="h-14 w-px bg-white/20" />
 
             <div>
-              <p className="text-xs md:text-sm text-white/60 tracking-[0.18em] mb-1">
+              <p className="text-xs md:text-sm text-white/60 tracking-[0.18em] mb-2">
                 KOSADILOK DEMONSTRATION SCHOOL
               </p>
 
-              <h1 className="text-xl md:text-3xl font-semibold tracking-tight text-white">
+              <h1 className="text-2xl md:text-4xl font-semibold tracking-tight text-white">
                 ชำระค่าธรรมเนียมการศึกษา
               </h1>
 
-              <p className="mt-1 text-sm md:text-base text-white/70">
+              <p className="mt-2 text-sm md:text-base text-white/70">
                 ภาคเรียนที่ 1 ปีการศึกษา 2569
               </p>
             </div>
@@ -372,9 +362,7 @@ export default function Home() {
             Student Info
         ========================= */}
         <section className="bg-white rounded-2xl p-6 border text-[#2D2926]">
-          <h2 className="text-[#7A1A22] font-bold mb-4">
-            Student Information
-          </h2>
+          <h2 className="text-[#7A1A22] font-bold mb-4">Student Information</h2>
 
           <div className="grid md:grid-cols-2 gap-4">
             <input
@@ -397,9 +385,7 @@ export default function Home() {
             Academic Program
         ========================= */}
         <section className="bg-white rounded-2xl p-6 border text-[#2D2926]">
-          <h2 className="text-[#7A1A22] font-bold mb-4">
-            Academic Program
-          </h2>
+          <h2 className="text-[#7A1A22] font-bold mb-4">Academic Program</h2>
 
           <div className="grid md:grid-cols-2 gap-4">
             <select
@@ -468,9 +454,7 @@ export default function Home() {
                   ค่าอาหารกลางวันและของว่าง
                 </p>
 
-                <p className="text-sm text-gray-500">
-                  12,000 บาท / ภาคเรียน
-                </p>
+                <p className="text-sm text-gray-500">12,000 บาท / ภาคเรียน</p>
               </div>
 
               <input
@@ -491,9 +475,7 @@ export default function Home() {
                   ค่าธรรมเนียมกิจกรรมและทัศนศึกษา
                 </p>
 
-                <p className="text-sm text-gray-500">
-                  5,000 บาท / ปีการศึกษา
-                </p>
+                <p className="text-sm text-gray-500">5,000 บาท / ปีการศึกษา</p>
               </div>
 
               <input
@@ -514,9 +496,7 @@ export default function Home() {
                   ค่าธรรมเนียมพัฒนาและบำรุงรักษาสถานศึกษา
                 </p>
 
-                <p className="text-sm text-gray-500">
-                  10,000 บาท / ปีการศึกษา
-                </p>
+                <p className="text-sm text-gray-500">10,000 บาท / ปีการศึกษา</p>
               </div>
             </div>
 
