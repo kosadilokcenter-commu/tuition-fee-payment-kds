@@ -1,9 +1,9 @@
 'use client';
 
 import Image from 'next/image';
-import { useEffect, useRef, useState } from 'react';
+import { useRef, useState } from 'react';
 import { Noto_Sans_Thai } from 'next/font/google';
-import { toBlob } from 'html-to-image';
+import html2canvas from 'html2canvas';
 
 const notoSansThai = Noto_Sans_Thai({
   subsets: ['thai'],
@@ -193,62 +193,6 @@ export default function Home() {
   const [exporting, setExporting] = useState(false);
 
   /* =========================
-     Receipt Logo
-  ========================= */
-
-  const [logoDataUrl, setLogoDataUrl] = useState('');
-
-  useEffect(() => {
-    let mounted = true;
-
-    const loadLogo = async () => {
-      try {
-        const response = await fetch('/logo-kds.png', {
-          cache: 'force-cache',
-        });
-
-        if (!response.ok) {
-          throw new Error('ไม่สามารถโหลดโลโก้ได้');
-        }
-
-        const blob = await response.blob();
-
-        const dataUrl = await new Promise<string>(
-          (resolve, reject) => {
-            const reader = new FileReader();
-
-            reader.onloadend = () => {
-              if (typeof reader.result === 'string') {
-                resolve(reader.result);
-              } else {
-                reject(new Error('ไม่สามารถแปลงโลโก้ได้'));
-              }
-            };
-
-            reader.onerror = () => {
-              reject(new Error('ไม่สามารถอ่านโลโก้ได้'));
-            };
-
-            reader.readAsDataURL(blob);
-          }
-        );
-
-        if (mounted) {
-          setLogoDataUrl(dataUrl);
-        }
-      } catch (error) {
-        console.error('Logo loading error:', error);
-      }
-    };
-
-    loadLogo();
-
-    return () => {
-      mounted = false;
-    };
-  }, []);
-
-  /* =========================
      Calculate Price
   ========================= */
 
@@ -290,6 +234,7 @@ export default function Home() {
 
   /* =========================
      Export Receipt JPG
+     ใช้ html2canvas
   ========================= */
 
   const exportReceipt = async () => {
@@ -302,91 +247,102 @@ export default function Home() {
 
       const element = receiptRef.current;
 
-      /* ถ้าโลโก้ยังโหลดไม่เสร็จ ให้โหลดก่อน Export */
-      let exportLogo = logoDataUrl;
+      /* =========================
+         รอรูปภาพทั้งหมดโหลดเสร็จ
+      ========================= */
 
-      if (!exportLogo) {
-        const response = await fetch('/logo-kds.png', {
-          cache: 'force-cache',
-        });
+      const images = Array.from(
+        element.querySelectorAll('img')
+      );
 
-        if (!response.ok) {
-          throw new Error('ไม่สามารถโหลดโลโก้ได้');
-        }
-
-        const blob = await response.blob();
-
-        exportLogo = await new Promise<string>(
-          (resolve, reject) => {
-            const reader = new FileReader();
-
-            reader.onloadend = () => {
-              if (typeof reader.result === 'string') {
-                resolve(reader.result);
-              } else {
-                reject(new Error('ไม่สามารถแปลงโลโก้ได้'));
-              }
-            };
-
-            reader.onerror = () => {
-              reject(new Error('ไม่สามารถอ่านโลโก้ได้'));
-            };
-
-            reader.readAsDataURL(blob);
-          }
-        );
-      }
-
-      /* รอให้ browser วาด Data URL */
-      const logo = element.querySelector(
-        '[data-receipt-logo]'
-      ) as HTMLImageElement | null;
-
-      if (logo && exportLogo) {
-        logo.src = exportLogo;
-
-        await new Promise<void>((resolve) => {
-          if (logo.complete && logo.naturalWidth > 0) {
-            resolve();
-            return;
+      await Promise.all(
+        images.map((img) => {
+          if (img.complete && img.naturalWidth > 0) {
+            return Promise.resolve();
           }
 
-          logo.onload = () => resolve();
-          logo.onerror = () => resolve();
-        });
+          return new Promise<void>((resolve) => {
+            img.onload = () => resolve();
+            img.onerror = () => resolve();
+          });
+        })
+      );
 
-        if (typeof logo.decode === 'function') {
-          try {
-            await logo.decode();
-          } catch {
-            // ไม่หยุดการ Export หาก browser decode ไม่สำเร็จ
-          }
-        }
-      }
+      /* =========================
+         รอ Browser Render
+      ========================= */
 
       await new Promise<void>((resolve) =>
         requestAnimationFrame(() => resolve())
       );
 
-      const width = element.offsetWidth;
-      const height = element.scrollHeight;
+      await new Promise<void>((resolve) =>
+        setTimeout(resolve, 100)
+      );
 
-      const blob = await toBlob(element, {
-        quality: 0.95,
+      /* =========================
+         Create Canvas
+      ========================= */
+
+      const canvas = await html2canvas(element, {
+        scale: 3,
         backgroundColor: '#7A1A22',
-        pixelRatio: 3,
-        width,
-        height,
-        style: {
-          width: `${width}px`,
-          height: `${height}px`,
-          margin: '0',
-          maxWidth: 'none',
+        useCORS: true,
+        allowTaint: false,
+        imageTimeout: 15000,
+        logging: false,
+        width: element.offsetWidth,
+        height: element.scrollHeight,
+        windowWidth: document.documentElement.clientWidth,
+        windowHeight: document.documentElement.clientHeight,
+        onclone: (clonedDocument) => {
+          const clonedReceipt =
+            clonedDocument.querySelector(
+              '[data-receipt]'
+            ) as HTMLElement | null;
+
+          if (clonedReceipt) {
+            clonedReceipt.style.width = `${element.offsetWidth}px`;
+            clonedReceipt.style.height = `${element.scrollHeight}px`;
+            clonedReceipt.style.maxWidth = 'none';
+            clonedReceipt.style.margin = '0';
+          }
+
+          const clonedImages =
+            clonedDocument.querySelectorAll(
+              '[data-receipt-logo]'
+            );
+
+          clonedImages.forEach((img) => {
+            const image = img as HTMLImageElement;
+
+            image.style.display = 'block';
+            image.style.visibility = 'visible';
+            image.style.opacity = '1';
+            image.style.width = '140px';
+            image.style.height = '140px';
+          });
         },
       });
 
+      /* =========================
+         Canvas → JPG Blob
+      ========================= */
+
+      const blob = await new Promise<Blob | null>(
+        (resolve) => {
+          canvas.toBlob(
+            resolve,
+            'image/jpeg',
+            0.95
+          );
+        }
+      );
+
       if (!blob) {
-        throw new Error('ไม่สามารถสร้างไฟล์ใบเสร็จได้');
+        throw new Error(
+          'ไม่สามารถสร้างไฟล์ใบเสร็จได้'
+        );
       }
 
       const fileName = `KDS-Receipt-${studentId || name || 'student'}.jpg`;
@@ -400,10 +356,14 @@ export default function Home() {
       ========================= */
 
       if (
-        /iPhone|iPad|iPod|Android/i.test(navigator.userAgent) &&
+        /iPhone|iPad|iPod|Android/i.test(
+          navigator.userAgent
+        ) &&
         navigator.share &&
         navigator.canShare &&
-        navigator.canShare({ files: [file] })
+        navigator.canShare({
+          files: [file],
+        })
       ) {
         await navigator.share({
           files: [file],
@@ -436,11 +396,16 @@ export default function Home() {
     } catch (error) {
       console.error(error);
 
-      if (error instanceof DOMException && error.name === 'AbortError') {
+      if (
+        error instanceof DOMException &&
+        error.name === 'AbortError'
+      ) {
         return;
       }
 
-      alert('ไม่สามารถดาวน์โหลดใบเสร็จได้ กรุณาลองใหม่อีกครั้ง');
+      alert(
+        'ไม่สามารถดาวน์โหลดใบเสร็จได้ กรุณาลองใหม่อีกครั้ง'
+      );
     } finally {
       setExporting(false);
     }
@@ -501,14 +466,18 @@ export default function Home() {
               className="border border-gray-300 bg-white text-[#2D2926] placeholder:text-gray-400 rounded-xl p-3 outline-none focus:border-[#7A1A22]"
               placeholder="Student Name"
               value={name}
-              onChange={(e) => setName(e.target.value)}
+              onChange={(e) =>
+                setName(e.target.value)
+              }
             />
 
             <input
               className="border border-gray-300 bg-white text-[#2D2926] placeholder:text-gray-400 rounded-xl p-3 outline-none focus:border-[#7A1A22]"
               placeholder="Student ID"
               value={studentId}
-              onChange={(e) => setStudentId(e.target.value)}
+              onChange={(e) =>
+                setStudentId(e.target.value)
+              }
             />
           </div>
         </section>
@@ -531,8 +500,11 @@ export default function Home() {
                   e.target.value as keyof typeof tuition;
 
                 setLevel(value);
+
                 setProgram(
-                  Object.keys(tuition[value].programs)[0]
+                  Object.keys(
+                    tuition[value].programs
+                  )[0]
                 );
               }}
             >
@@ -542,7 +514,11 @@ export default function Home() {
                   value={item}
                   className="bg-white text-[#2D2926]"
                 >
-                  {levelLabel[item as keyof typeof levelLabel]}
+                  {
+                    levelLabel[
+                      item as keyof typeof levelLabel
+                    ]
+                  }
                 </option>
               ))}
             </select>
@@ -550,7 +526,9 @@ export default function Home() {
             <select
               className="border border-gray-300 bg-white text-[#2D2926] rounded-xl p-3 outline-none focus:border-[#7A1A22]"
               value={program}
-              onChange={(e) => setProgram(e.target.value)}
+              onChange={(e) =>
+                setProgram(e.target.value)
+              }
             >
               {programList.map((item) => (
                 <option
@@ -570,11 +548,15 @@ export default function Home() {
                 type="checkbox"
                 checked={firstEntry}
                 onChange={(e) =>
-                  setFirstEntry(e.target.checked)
+                  setFirstEntry(
+                    e.target.checked
+                  )
                 }
               />
 
-              <span>นักเรียนใหม่ / ค่าสมัครแรกเข้า</span>
+              <span>
+                นักเรียนใหม่ / ค่าสมัครแรกเข้า
+              </span>
             </label>
           )}
         </section>
@@ -629,7 +611,8 @@ export default function Home() {
                 onChange={(e) =>
                   setExtra({
                     ...extra,
-                    activity: e.target.checked,
+                    activity:
+                      e.target.checked,
                   })
                 }
               />
@@ -716,25 +699,19 @@ export default function Home() {
         <div className="flex justify-center">
           <section
             ref={receiptRef}
+            data-receipt
             className="w-[448px] bg-[#7A1A22] rounded-2xl p-8"
           >
             <div className="bg-white rounded-xl overflow-hidden text-[#2D2926]">
               <div className="text-center px-6 pt-8 pb-5">
-
-                {/* ใช้ img ธรรมดาเพื่อให้ html-to-image
-                    จับ Data URL ได้โดยตรงบนมือถือ */}
-                <img
-                  data-receipt-logo
-                  src={logoDataUrl || '/logo-kds.png'}
+                <Image
+                  src="/logo-kds.png"
                   alt="KDS Logo"
                   width={140}
                   height={140}
                   className="mx-auto mb-3 object-contain"
-                  style={{
-                    width: '140px',
-                    height: '140px',
-                    display: 'block',
-                  }}
+                  data-receipt-logo
+                  unoptimized
                 />
 
                 <h3 className="font-bold text-[#7A1A22]">
@@ -776,6 +753,7 @@ export default function Home() {
                 <div className="space-y-3 text-sm text-[#2D2926]">
                   <div className="flex justify-between gap-4">
                     <span>ค่าเล่าเรียนปกติ</span>
+
                     <span>
                       {basePrice.toLocaleString()}
                     </span>
@@ -792,6 +770,7 @@ export default function Home() {
                   {admissionFee > 0 && (
                     <div className="flex justify-between gap-4">
                       <span>ค่าสมัครแรกเข้า</span>
+
                       <span>
                         {admissionFee.toLocaleString()}
                       </span>
@@ -803,6 +782,7 @@ export default function Home() {
                       <span>
                         ค่าอาหารกลางวันและของว่าง
                       </span>
+
                       <span>12,000</span>
                     </div>
                   )}
@@ -812,6 +792,7 @@ export default function Home() {
                       <span>
                         ค่าธรรมเนียมกิจกรรมและทัศนศึกษา
                       </span>
+
                       <span>5,000</span>
                     </div>
                   )}
@@ -821,6 +802,7 @@ export default function Home() {
                       <span>
                         ค่าบริการรถรับ-ส่งนักเรียน โซน A
                       </span>
+
                       <span>15,000</span>
                     </div>
                   )}
@@ -830,6 +812,7 @@ export default function Home() {
                       <span>
                         ค่าบริการรถรับ-ส่งนักเรียน โซน B
                       </span>
+
                       <span>20,000</span>
                     </div>
                   )}
@@ -839,6 +822,7 @@ export default function Home() {
                       <span>
                         ค่าบริการรถรับ-ส่งนักเรียน โซน C
                       </span>
+
                       <span>25,000</span>
                     </div>
                   )}
