@@ -171,7 +171,9 @@ export default function Home() {
      Academic Data
   ========================= */
 
-  const [level, setLevel] = useState<keyof typeof tuition>('มัธยมศึกษาปีที่_4');
+  const [level, setLevel] = useState<keyof typeof tuition>(
+    'มัธยมศึกษาปีที่_4'
+  );
 
   const [program, setProgram] = useState('วิทย์ - คณิต');
 
@@ -334,30 +336,30 @@ export default function Home() {
       ========================= */}
 
       <header className="bg-[#7A1A22] rounded-2xl text-white">
-        <div className="px-8 py-9 md:px-12 md:py-10">
-          <div className="flex items-center gap-6">
+        <div className="px-6 py-5 md:px-8 md:py-6">
+          <div className="flex items-center gap-4">
             <div className="shrink-0">
               <Image
                 src="/logo-kds.png"
                 alt="KDS Logo"
-                width={88}
-                height={88}
+                width={64}
+                height={64}
                 className="object-contain"
               />
             </div>
 
-            <div className="h-14 w-px bg-white/20" />
+            <div className="h-12 w-px bg-white/20" />
 
             <div>
-              <p className="text-xs md:text-sm text-white/60 tracking-[0.18em] mb-2">
+              <p className="text-xs md:text-sm text-white/60 tracking-[0.18em] mb-1">
                 KOSADILOK DEMONSTRATION SCHOOL
               </p>
 
-              <h1 className="text-2xl md:text-4xl font-semibold tracking-tight text-white">
+              <h1 className="text-xl md:text-3xl font-semibold tracking-tight text-white">
                 ชำระค่าธรรมเนียมการศึกษา
               </h1>
 
-              <p className="mt-2 text-sm md:text-base text-white/70">
+              <p className="mt-1 text-sm md:text-base text-white/70">
                 ภาคเรียนที่ 1 ปีการศึกษา 2569
               </p>
             </div>
