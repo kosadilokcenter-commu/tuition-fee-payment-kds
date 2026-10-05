@@ -171,7 +171,8 @@ export default function Home() {
      Academic Data
   ========================= */
 
-  const [level, setLevel] = useState<keyof typeof tuition>('มัธยมศึกษาปีที่_4');
+  const [level, setLevel] =
+    useState<keyof typeof tuition>('มัธยมศึกษาปีที่_4');
 
   const [program, setProgram] = useState('วิทย์ - คณิต');
 
@@ -186,7 +187,8 @@ export default function Home() {
     activity: false,
   });
 
-  const [busZone, setBusZone] = useState<'none' | 'A' | 'B' | 'C'>('none');
+  const [busZone, setBusZone] =
+    useState<'none' | 'A' | 'B' | 'C'>('none');
 
   const [exporting, setExporting] = useState(false);
 
@@ -197,10 +199,10 @@ export default function Home() {
   const programList = Object.keys(tuition[level].programs);
 
   const basePrice = (
-  tuition[level].programs as Record<
-    string,
-    { semester: number; yearly: number }
-  >
+    tuition[level].programs as Record<
+      string,
+      { semester: number; yearly: number }
+    >
   )[program].semester;
 
   let admissionFee = 0;
@@ -243,6 +245,30 @@ export default function Home() {
       await document.fonts.ready;
 
       const element = receiptRef.current;
+
+      /* =========================
+         Wait for Receipt Images
+      ========================= */
+
+      const images = Array.from(element.querySelectorAll('img'));
+
+      await Promise.all(
+        images.map((img) => {
+          if (img.complete && img.naturalWidth > 0) {
+            return Promise.resolve();
+          }
+
+          return new Promise<void>((resolve) => {
+            img.onload = () => resolve();
+            img.onerror = () => resolve();
+          });
+        })
+      );
+
+      // รอ browser render รูปภาพให้เสร็จอีกหนึ่งรอบ
+      await new Promise<void>((resolve) =>
+        requestAnimationFrame(() => resolve())
+      );
 
       const width = element.offsetWidth;
       const height = element.scrollHeight;
@@ -366,8 +392,11 @@ export default function Home() {
         {/* =========================
             Student Info
         ========================= */}
+
         <section className="bg-white rounded-2xl p-6 border text-[#2D2926]">
-          <h2 className="text-[#7A1A22] font-bold mb-4">Student Information</h2>
+          <h2 className="text-[#7A1A22] font-bold mb-4">
+            Student Information
+          </h2>
 
           <div className="grid md:grid-cols-2 gap-4">
             <input
@@ -389,15 +418,19 @@ export default function Home() {
         {/* =========================
             Academic Program
         ========================= */}
+
         <section className="bg-white rounded-2xl p-6 border text-[#2D2926]">
-          <h2 className="text-[#7A1A22] font-bold mb-4">Academic Program</h2>
+          <h2 className="text-[#7A1A22] font-bold mb-4">
+            Academic Program
+          </h2>
 
           <div className="grid md:grid-cols-2 gap-4">
             <select
               className="border border-gray-300 bg-white text-[#2D2926] rounded-xl p-3 outline-none focus:border-[#7A1A22]"
               value={level}
               onChange={(e) => {
-                const value = e.target.value as keyof typeof tuition;
+                const value =
+                  e.target.value as keyof typeof tuition;
 
                 setLevel(value);
                 setProgram(Object.keys(tuition[value].programs)[0]);
@@ -447,6 +480,7 @@ export default function Home() {
         {/* =========================
             Student Services & Facility Support
         ========================= */}
+
         <section className="bg-white rounded-2xl p-6 border text-[#2D2926]">
           <h2 className="text-[#7A1A22] font-bold mb-4">
             Student Services & Facility Support
@@ -459,7 +493,9 @@ export default function Home() {
                   ค่าอาหารกลางวันและของว่าง
                 </p>
 
-                <p className="text-sm text-gray-500">12,000 บาท / ภาคเรียน</p>
+                <p className="text-sm text-gray-500">
+                  12,000 บาท / ภาคเรียน
+                </p>
               </div>
 
               <input
@@ -480,7 +516,9 @@ export default function Home() {
                   ค่าธรรมเนียมกิจกรรมและทัศนศึกษา
                 </p>
 
-                <p className="text-sm text-gray-500">5,000 บาท / ปีการศึกษา</p>
+                <p className="text-sm text-gray-500">
+                  5,000 บาท / ปีการศึกษา
+                </p>
               </div>
 
               <input
@@ -501,7 +539,9 @@ export default function Home() {
                   ค่าธรรมเนียมพัฒนาและบำรุงรักษาสถานศึกษา
                 </p>
 
-                <p className="text-sm text-gray-500">10,000 บาท / ปีการศึกษา</p>
+                <p className="text-sm text-gray-500">
+                  10,000 บาท / ปีการศึกษา
+                </p>
               </div>
             </div>
 
@@ -509,22 +549,36 @@ export default function Home() {
               className="w-full border border-gray-300 bg-white text-[#2D2926] rounded-xl p-3 outline-none focus:border-[#7A1A22]"
               value={busZone}
               onChange={(e) =>
-                setBusZone(e.target.value as 'none' | 'A' | 'B' | 'C')
+                setBusZone(
+                  e.target.value as 'none' | 'A' | 'B' | 'C'
+                )
               }
             >
-              <option value="none" className="bg-white text-[#2D2926]">
+              <option
+                value="none"
+                className="bg-white text-[#2D2926]"
+              >
                 ค่าบริการรถรับ-ส่งนักเรียน
               </option>
 
-              <option value="A" className="bg-white text-[#2D2926]">
+              <option
+                value="A"
+                className="bg-white text-[#2D2926]"
+              >
                 โซน A — 15,000 บาท / ภาคเรียน
               </option>
 
-              <option value="B" className="bg-white text-[#2D2926]">
+              <option
+                value="B"
+                className="bg-white text-[#2D2926]"
+              >
                 โซน B — 20,000 บาท / ภาคเรียน
               </option>
 
-              <option value="C" className="bg-white text-[#2D2926]">
+              <option
+                value="C"
+                className="bg-white text-[#2D2926]"
+              >
                 โซน C — 25,000 บาท / ภาคเรียน
               </option>
             </select>
@@ -538,8 +592,11 @@ export default function Home() {
         {/* =========================
             Total
         ========================= */}
+
         <section className="bg-[#7A1A22] text-white rounded-2xl p-8 text-center">
-          <p className="text-white opacity-70">Total Amount</p>
+          <p className="text-white opacity-70">
+            Total Amount
+          </p>
 
           <h2 className="text-4xl font-bold text-white">
             {total.toLocaleString()} THB
@@ -549,6 +606,7 @@ export default function Home() {
         {/* =========================
             Receipt
         ========================= */}
+
         <div className="flex justify-center">
           <section
             ref={receiptRef}
@@ -603,11 +661,15 @@ export default function Home() {
                 <div className="space-y-3 text-sm text-[#2D2926]">
                   <div className="flex justify-between gap-4">
                     <span>ค่าเล่าเรียนปกติ</span>
-                    <span>{basePrice.toLocaleString()}</span>
+                    <span>
+                      {basePrice.toLocaleString()}
+                    </span>
                   </div>
 
                   <div className="flex justify-between gap-4">
-                    <span>ค่าธรรมเนียมพัฒนาและบำรุงรักษาสถานศึกษา</span>
+                    <span>
+                      ค่าธรรมเนียมพัฒนาและบำรุงรักษาสถานศึกษา
+                    </span>
 
                     <span>10,000</span>
                   </div>
@@ -615,7 +677,9 @@ export default function Home() {
                   {admissionFee > 0 && (
                     <div className="flex justify-between gap-4">
                       <span>ค่าสมัครแรกเข้า</span>
-                      <span>{admissionFee.toLocaleString()}</span>
+                      <span>
+                        {admissionFee.toLocaleString()}
+                      </span>
                     </div>
                   )}
 
@@ -628,28 +692,36 @@ export default function Home() {
 
                   {extra.activity && (
                     <div className="flex justify-between gap-4">
-                      <span>ค่าธรรมเนียมกิจกรรมและทัศนศึกษา</span>
+                      <span>
+                        ค่าธรรมเนียมกิจกรรมและทัศนศึกษา
+                      </span>
                       <span>5,000</span>
                     </div>
                   )}
 
                   {busZone === 'A' && (
                     <div className="flex justify-between gap-4">
-                      <span>ค่าบริการรถรับ-ส่งนักเรียน โซน A</span>
+                      <span>
+                        ค่าบริการรถรับ-ส่งนักเรียน โซน A
+                      </span>
                       <span>15,000</span>
                     </div>
                   )}
 
                   {busZone === 'B' && (
                     <div className="flex justify-between gap-4">
-                      <span>ค่าบริการรถรับ-ส่งนักเรียน โซน B</span>
+                      <span>
+                        ค่าบริการรถรับ-ส่งนักเรียน โซน B
+                      </span>
                       <span>20,000</span>
                     </div>
                   )}
 
                   {busZone === 'C' && (
                     <div className="flex justify-between gap-4">
-                      <span>ค่าบริการรถรับ-ส่งนักเรียน โซน C</span>
+                      <span>
+                        ค่าบริการรถรับ-ส่งนักเรียน โซน C
+                      </span>
                       <span>25,000</span>
                     </div>
                   )}
@@ -674,13 +746,16 @@ export default function Home() {
         {/* =========================
             Export Receipt
         ========================= */}
+
         <div className="flex justify-center">
           <button
             onClick={exportReceipt}
             disabled={exporting}
             className="bg-[#7A1A22] text-white px-8 py-3 rounded-xl font-bold"
           >
-            {exporting ? 'Exporting...' : 'Download Receipt'}
+            {exporting
+              ? 'Exporting...'
+              : 'Download Receipt'}
           </button>
         </div>
       </div>
