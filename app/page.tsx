@@ -1,7 +1,7 @@
 'use client';
 
 import Image from 'next/image';
-import { useRef, useState } from 'react';
+import { useEffect, useRef, useState } from 'react';
 import { Noto_Sans_Thai } from 'next/font/google';
 import { toBlob } from 'html-to-image';
 
@@ -193,6 +193,62 @@ export default function Home() {
   const [exporting, setExporting] = useState(false);
 
   /* =========================
+     Receipt Logo
+  ========================= */
+
+  const [logoDataUrl, setLogoDataUrl] = useState('');
+
+  useEffect(() => {
+    let mounted = true;
+
+    const loadLogo = async () => {
+      try {
+        const response = await fetch('/logo-kds.png', {
+          cache: 'force-cache',
+        });
+
+        if (!response.ok) {
+          throw new Error('ไม่สามารถโหลดโลโก้ได้');
+        }
+
+        const blob = await response.blob();
+
+        const dataUrl = await new Promise<string>(
+          (resolve, reject) => {
+            const reader = new FileReader();
+
+            reader.onloadend = () => {
+              if (typeof reader.result === 'string') {
+                resolve(reader.result);
+              } else {
+                reject(new Error('ไม่สามารถแปลงโลโก้ได้'));
+              }
+            };
+
+            reader.onerror = () => {
+              reject(new Error('ไม่สามารถอ่านโลโก้ได้'));
+            };
+
+            reader.readAsDataURL(blob);
+          }
+        );
+
+        if (mounted) {
+          setLogoDataUrl(dataUrl);
+        }
+      } catch (error) {
+        console.error('Logo loading error:', error);
+      }
+    };
+
+    loadLogo();
+
+    return () => {
+      mounted = false;
+    };
+  }, []);
+
+  /* =========================
      Calculate Price
   ========================= */
 
@@ -246,72 +302,67 @@ export default function Home() {
 
       const element = receiptRef.current;
 
-      /* =========================
-         Convert Logo to Data URL
-         สำหรับแก้ปัญหาโลโก้หายบนมือถือ
-      ========================= */
+      /* ถ้าโลโก้ยังโหลดไม่เสร็จ ให้โหลดก่อน Export */
+      let exportLogo = logoDataUrl;
 
-      const logoResponse = await fetch('/logo-kds.png', {
-        cache: 'force-cache',
-      });
+      if (!exportLogo) {
+        const response = await fetch('/logo-kds.png', {
+          cache: 'force-cache',
+        });
 
-      if (!logoResponse.ok) {
-        throw new Error('ไม่สามารถโหลดโลโก้โรงเรียนได้');
+        if (!response.ok) {
+          throw new Error('ไม่สามารถโหลดโลโก้ได้');
+        }
+
+        const blob = await response.blob();
+
+        exportLogo = await new Promise<string>(
+          (resolve, reject) => {
+            const reader = new FileReader();
+
+            reader.onloadend = () => {
+              if (typeof reader.result === 'string') {
+                resolve(reader.result);
+              } else {
+                reject(new Error('ไม่สามารถแปลงโลโก้ได้'));
+              }
+            };
+
+            reader.onerror = () => {
+              reject(new Error('ไม่สามารถอ่านโลโก้ได้'));
+            };
+
+            reader.readAsDataURL(blob);
+          }
+        );
       }
 
-      const logoBlob = await logoResponse.blob();
+      /* รอให้ browser วาด Data URL */
+      const logo = element.querySelector(
+        '[data-receipt-logo]'
+      ) as HTMLImageElement | null;
 
-      const logoDataUrl = await new Promise<string>(
-        (resolve, reject) => {
-          const reader = new FileReader();
+      if (logo && exportLogo) {
+        logo.src = exportLogo;
 
-          reader.onloadend = () => {
-            if (typeof reader.result === 'string') {
-              resolve(reader.result);
-            } else {
-              reject(new Error('ไม่สามารถแปลงโลโก้ได้'));
-            }
-          };
-
-          reader.onerror = () => {
-            reject(new Error('ไม่สามารถอ่านไฟล์โลโก้ได้'));
-          };
-
-          reader.readAsDataURL(logoBlob);
-        }
-      );
-
-      /* =========================
-         Replace Logo Temporarily
-         ด้วย Data URL โดยตรง
-      ========================= */
-
-      const images = Array.from(
-        element.querySelectorAll('img')
-      );
-
-      const originalSources = images.map((img) => ({
-        img,
-        src: img.getAttribute('src'),
-      }));
-
-      images.forEach((img) => {
-        img.setAttribute('src', logoDataUrl);
-      });
-
-      /* รอให้ Data URL ถูก render */
-      await Promise.all(
-        images.map((img) => {
-          if (img.complete && img.naturalWidth > 0) {
-            return Promise.resolve();
+        await new Promise<void>((resolve) => {
+          if (logo.complete && logo.naturalWidth > 0) {
+            resolve();
+            return;
           }
 
-          return new Promise<void>((resolve) => {
-            img.onload = () => resolve();
-            img.onerror = () => resolve();
-          });
-        })
-      );
+          logo.onload = () => resolve();
+          logo.onerror = () => resolve();
+        });
+
+        if (typeof logo.decode === 'function') {
+          try {
+            await logo.decode();
+          } catch {
+            // ไม่หยุดการ Export หาก browser decode ไม่สำเร็จ
+          }
+        }
+      }
 
       await new Promise<void>((resolve) =>
         requestAnimationFrame(() => resolve())
@@ -332,18 +383,6 @@ export default function Home() {
           margin: '0',
           maxWidth: 'none',
         },
-      });
-
-      /* =========================
-         Restore Original Logo
-      ========================= */
-
-      originalSources.forEach(({ img, src }) => {
-        if (src) {
-          img.setAttribute('src', src);
-        } else {
-          img.removeAttribute('src');
-        }
       });
 
       if (!blob) {
@@ -681,12 +720,21 @@ export default function Home() {
           >
             <div className="bg-white rounded-xl overflow-hidden text-[#2D2926]">
               <div className="text-center px-6 pt-8 pb-5">
-                <Image
-                  src="/logo-kds.png"
+
+                {/* ใช้ img ธรรมดาเพื่อให้ html-to-image
+                    จับ Data URL ได้โดยตรงบนมือถือ */}
+                <img
+                  data-receipt-logo
+                  src={logoDataUrl || '/logo-kds.png'}
                   alt="KDS Logo"
                   width={140}
                   height={140}
                   className="mx-auto mb-3 object-contain"
+                  style={{
+                    width: '140px',
+                    height: '140px',
+                    display: 'block',
+                  }}
                 />
 
                 <h3 className="font-bold text-[#7A1A22]">
